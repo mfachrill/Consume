@@ -9,6 +9,13 @@ use App\Helpers\ApiFormatter;
 
 class StuffController extends Controller
 {
+
+    public function __construct()
+{
+    $this->middleware('auth:api');
+}
+
+
     public function index()
     {
         $stuff = Stuff::with('stuffstock')->get();
@@ -84,7 +91,7 @@ class StuffController extends Controller
     {
         try {
             $stuff = Stuff::findOrFail($id);
-
+            
             $name = ($request->name) ? $request->name : $stuff->name;
             $category = ($request->category) ? $request->category : $stuff->category;
 

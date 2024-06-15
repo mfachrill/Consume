@@ -5,28 +5,41 @@ namespace App\Http\Controllers;
 use App\Models\Stuff;
 use App\Models\SoftDeletes;
 use App\Models\StuffStock;
+use App\Helpers\ApiFormatter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class StuffStockController extends Controller
 {
+
+    public function __construct()
+{
+    $this->middleware('auth:api');
+}
+
     public function index()
     {
-        $stuffStock = StuffStock::all();
+        try {
+            $data = Stuff::with('stuffStock')->get();
+            return ApiFormatter::sendResponse(200, 'success', $data);
+        }catch (\Exception $err) {
+            return ApiFormatter::sendResponse(400, 'Bad Request', $err->getMessage());
+        }
+        // $stuffStock = StuffStock::all();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Lihat semua barang masuk',
-            'data' => $stuffStock
-        ], 200);
+        // return response()->json([
+        //     'success' => true,
+        //     'message' => 'Lihat semua barang masuk',
+        //     'data' => $stuffStock
+        // ], 200);
     }
 
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'stuff_id' => 'required',
-            'total_avaible' => 'required',
-            'total_defect' => 'required',
+            'total_available' => 'required',
+            'total_defec' => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -40,8 +53,8 @@ class StuffStockController extends Controller
             $stock = StuffStock::updateOrCreate([
                 'stuff_id' => $request->input('stuff_id'),
             ], [
-                'total_avaible' => $request->input('total_avaible'),
-                'total_defect' => $request->input('total_defect'),
+                'total_available' => $request->input('total_available'),
+                'total_defec' => $request->input('total_defec'),
             ]);
 
             if ($stock) {
@@ -83,14 +96,14 @@ class StuffStockController extends Controller
             $stock = StuffStock::with('stuff')->find($id);
 
             $stuff_id = ($request->stuff_id) ? $request->stuff_id : $stock->stuff_id;
-            $total_avaible = ($request->total_avaible) ? $request->total_avaible : $stock->total_avaible;
-            $total_defect = ($request->total_defect) ? $request->total_defect : $stock->total_defect;
+            $total_available = ($request->total_available) ? $request->total_available : $stock->total_available;
+            $total_defec = ($request->total_defec) ? $request->total_defec : $stock->total_defec;
 
             if ($stock) {
                 $stock->update([
                     'stuff_id' => $stuff_id,
-                    'total_avaible' => $total_avaible,
-                    'total_defect' => $total_defect
+                    'total_available' => $total_available,
+                    'total_defec' => $total_defec
                 ]);
 
                 return response()->json([
@@ -142,7 +155,7 @@ class StuffStockController extends Controller
             $stock = StuffStock::onlyTrashed()->findOrFail($id);
             $has_stock = StuffStock::where('stuff_id', $stock->stuff_id)->get();
 
-            if (has_stock->count() == 1){
+            if ($has_stock->count() == 1){
                 $message = "Data stok sudah ada, tidak boleh ada duplikat data stok untuk satu baranf silakan update data stok dengan id stock 
                 $stock->stuff_id";
             } else {

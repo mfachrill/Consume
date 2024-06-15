@@ -9,8 +9,8 @@ class InboundStuff extends Model
 {
     use SoftDeletes;
 
-    protected $table = 'inbond_stuffs';
-    protected $fillable = ["stuff_id", "total", "date", "proof_file"];
+    //protected $table = 'inbound_stuffs';
+    protected $fillable = ["stuff_id", "total", "date", "proff_file"];
 
     public function stuff()
     {

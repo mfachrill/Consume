@@ -11,50 +11,85 @@ use App\Models\Stuff;
 
 class InboundStuffController extends Controller
 {
-    public function store(Request $request)
+
+    public function __construct()
+{
+    $this->middleware('auth:api');
+}
+
+public function index()
     {
-       
-        try {
-           
-            $this->validate($request,[
-                'stuff_id' => 'required',
-                'total' => 'required',
-                'date' => 'required',
-                'proff_file' => 'required|image',
-            ]);
-            $Image = Str::random(5) .  "_". $request->file('proff_file')->getClientOriginalName();
-            $request->file('proff_file')->move('upload-images', $Image);
-            $pathImage = url('upload-images/' . $Image);
-        
-          $inboundData = InboundStuff::create([
+        $inboundStuff = InboundStuff::all();
+
+        return ApiFormatter::sendResponse(200, true, "Lihat semua barang masuk", $inboundStuff);
+
+        // return response()->json([
+        //     'success' => true,
+        //     'message' => 'Lihat semua barang masuk',
+        //     'data' => $inboundStuff
+        // ], 200);
+    }
+
+public function store(Request $request)
+{
+    try {
+        $this->validate($request, [
+            'stuff_id' => 'required',
+            'total' => 'required',
+            'date' => 'required',
+            'proff_file' => 'required|mimes:jpeg,png,jpg,pdf|max:2048',
+        ]); 
+
+        if($request->hasFile('proff_file')) {
+            $proff = $request->file('proff_file'); 
+            $destinationPath = 'upload-images/'; // destionationPath = untuk memasukan file ke folder tujuan 
+            $proffName = date('YmdHis') . "." . $proff->getClientOriginalExtension();
+            $proff->move($destinationPath, $proffName); 
+        }
+        $createStock = InboundStuff::create([
             'stuff_id' => $request->stuff_id,
-                'total' => $request->total,
-                'date' => $request->date,
-                'proof_file' => $pathImage,
-          ]);
+            'total' => $request->total,
+            'date' => $request->date,
+            'proff_file' => $proffName,
+        ]);
 
-          if ($inboundData) {
-            $stockData = StuffStock::where('stuff_id', $request->stuff_id)->first();
-            if ($stockData) {
-                $total_avaible = (int)$stockData['total_avaible'] + (int)$request->total;
-                $stockData->update(['total_avaible' => $total_avaible]);
-            }else { 
-                StuffStock::create([
+        if ($createStock){
+            $getStuff = Stuff::where('id', $request->stuff_id)->first();
+            $getStuffStock = StuffStock::where('stuff_id', $request->stuff_id)->first();
+
+            if (!$getStuffStock){
+                $updateStock = StuffStock::create([
                     'stuff_id' => $request->stuff_id,
-                    'total_avaible' => $request->total,
-                    'total_defect' => 0,
-
+                    'total_available' => $request->total,
+                    'total_defec' => 0,
+                ]);
+            } else {
+                $updateStock = $getStuffStock->update([
+                    'stuff_id' => $request->stuff_id,
+                    'total_available' =>$getStuffStock['total_available'] + $request->total,
+                    'total_defec' => $getStuffStock['total_defec'],
                 ]);
             }
-            $stuffWithInboundAndStock = Stuff::where('id', $request->stuff_id)->with('inboundStuff','stuffStock')->first();
-            return ApiFormatter::sendResponse(200, 'success', $stuffWithInboundAndStock);
 
-          }
-        } catch (\Exception $err) {
-            return ApiFormatter::sendResponse( 400,'bad request', $err->getMessage());
-            
+            if ($updateStock) {
+                $getStock = StuffStock::where('stuff_id', $request->stuff_id)->first();
+                $stuff = [
+                    'stuff' => $getStuff,
+                    'InboundStuff' => $createStock,
+                    'stuffStock' => $getStock
+                ];
+
+                return ApiFormatter::sendResponse(200, 'Successfully Create A Inbound Stuff Data', $stuff);
+            } else {
+                return ApiFormatter::sendResponse(400, false, 'Failed To Update A Stuff Stock Data');
+            }
+        } else {
         }
+    } catch (\Exception $err) {
+        return ApiFormatter::sendResponse(400, false, $err->getMessage());
     }
+}
+  
 
     public function destroy($id)
     {
@@ -116,7 +151,7 @@ class InboundStuffController extends Controller
         try {
             $getInbound = InboundStuff::onlyTrashed()->where('id',$id)->first();
 
-            unlink(base_path('public/proof/'.$getInbound->proof_file));
+            unlink(base_path('public/proff/'.$getInbound->proff_file));
             $checkProses = InboundStuff::where('id', $id)->forceDelete();
     
             return ApiFormatter::sendResponse(200, 'success', 'Data inbound-stuff berhasil dihapus permanen');
@@ -128,11 +163,11 @@ class InboundStuffController extends Controller
     private function deleteAssociatedFile(InboundStuff $inboundStuff)
     {
         // Mendapatkan jalur lengkap ke direktori public
-        $publicPath = $_SERVER['DOCUMENT_ROOT'] . '/public/proof';
+        $publicPath = $_SERVER['DOCUMENT_ROOT'] . '/public/proff';
 
     
         // Menggabungkan jalur file dengan jalur direktori public
-         $filePath = public_path('proof/'.$inboundStuff->proof_file);
+         $filePath = public_path('proff/'.$inboundStuff->proff_file);
     
         // Periksa apakah file ada
         if (file_exists($filePath)) {

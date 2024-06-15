@@ -8,10 +8,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class StuffStock extends Model
 {
     use SoftDeletes;
-    protected $fillable = ['stuff_id', 'total_available', 'total_defec'];
+    protected $fillable = ['stuff_id', 'total_available', 'total_defec']; 
 
     public function stuff()
     {
-        return $this->belongsTo(Stuff::class);
+        return $this->belongsTo(Stuff::class, 'stuff_id', 'id');
     }
 }

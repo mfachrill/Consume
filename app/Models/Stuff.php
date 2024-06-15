@@ -12,7 +12,7 @@ class Stuff extends Model
 
     public function stuffStock()
     {
-        return $this->hasOne(StuffStock::class);
+        return $this->hasOne(StuffStock::class, 'stuff_id', 'id');
     }
     public function inboundStuffs()
     {
